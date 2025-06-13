@@ -1,0 +1,52 @@
+body {
+    background: #111;
+    color: #FFD700;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+.container { max-width: 800px; margin: auto; }
+h1 { text-align: center; margin-bottom: 20px; }
+
+.actions { text-align: center; margin-bottom: 20px; }
+.actions button {
+    background: #FFD700; color: #111;
+    border: none; border-radius: 12px;
+    padding: 8px 20px; margin: 0 5px;
+    cursor: pointer; font-weight: bold;
+    transition: background 0.3s;
+}
+.actions button:hover { background: #e6c200; }
+
+.post-item {
+    background: #222; border: 1px solid #FFD700;
+    padding: 15px; margin-bottom: 15px;
+    border-radius: 8px;
+}
+.post-header { font-weight: bold; margin-bottom: 10px; }
+.post-text { margin-bottom: 10px; }
+.post-media img, .post-media video, .post-media audio {
+    max-width: 100%; margin-top: 10px; border-radius: 5px;
+}
+.comment-section {
+    display: flex; align-items: center; margin-top: 10px;
+}
+input[type="text"] {
+    width: 70%; padding: 10px;
+    background: #222; color: #FFD700;
+    border: 1px solid #555; border-radius: 12px;
+    margin-right: 10px; outline: none;
+}
+button {
+    border-radius: 12px; padding: 6px 12px;
+}
+ul li {
+    background: #333; padding: 10px; margin-top: 5px;
+    border-radius: 8px; position: relative;
+}
+li button.delete-comment {
+    position: absolute; right: 8px; top: 5px;
+    background: #b22222; color: white;
+    border-radius: 8px; padding: 2px 6px;
+    font-size: 0.9em;
+}

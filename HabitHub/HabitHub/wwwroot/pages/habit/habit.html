@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>HabitHub — Привычки пользователя</title>
+    <link rel="stylesheet" href="pages/habit/styles.css" />
+</head>
+<body>
+<div class="container">
+    <h1 class="center-title">Привычки пользователя</h1>
+
+    <div class="center-btn">
+        <button id="toggleFormBtn">Добавить привычку</button>
+    </div>
+
+    <form id="habitForm" class="hidden">
+        <label>Тип привычки:
+            <select id="habitType"></select>
+            <div id="typeError" class="error"></div>
+        </label>
+
+        <div id="physicalActivitySection" class="hidden">
+            <label>Подтип активности:
+                <select id="physicalActivityType"></select>
+                <div id="subtypeError" class="error"></div>
+            </label>
+        </div>
+
+        <label>Цель:
+            <input type="text" id="habitGoal" />
+            <div id="goalError" class="error"></div>
+        </label>
+
+        <button type="button" id="submitHabit">Сохранить</button>
+    </form>
+
+    <div id="habitList" class="habit-list"></div>
+</div>
+
+<script src="pages/habit/script.js"></script>
+</body>
+</html>

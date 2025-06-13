@@ -1,0 +1,90 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #fdfdfd;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    max-width: 700px;
+    margin: auto;
+}
+.center-title {
+    text-align: center;
+    color: #ffc107;
+    font-size: 32px;
+    margin-bottom: 30px;
+}
+.center-btn {
+    text-align: center;
+    margin: 20px 0;
+}
+button {
+    background: #ffc107;
+    color: #000;
+    border: none;
+    padding: 10px 15px;
+    margin: 5px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:hover {
+    background: #e0a800;
+}
+.habit-list {
+    margin-top: 20px;
+}
+.habit-item {
+    background: #222;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+.habit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.habit-actions button {
+    margin-left: 5px;
+}
+.hidden {
+    display: none;
+}
+.error {
+    color: #ff4f4f;
+    font-size: 13px;
+}
+.progress-section {
+    margin-top: 10px;
+    border-top: 1px solid #444;
+    padding-top: 10px;
+}
+form {
+    background-color: #1a1a1a;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+form label {
+    display: block;
+    margin-bottom: 24px; /* Больше отступ между полями */
+    font-weight: bold;
+}
+
+form input[type="text"],
+form input[type="date"],
+form input[type="number"],
+form select {
+    width: 100%;
+    padding: 14px; /* Увеличенный padding */
+    font-size: 18px; /* Крупнее текст */
+    margin-top: 6px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background-color: #2a2a2a;
+    color: #fff;
+    box-sizing: border-box;
+}
