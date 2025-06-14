@@ -2,19 +2,961 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>HabitHub — Профиль</title>
-    <link rel="stylesheet" href="/pages/profile/styles.css">
+    <title>HabitHub — Профиль пользователя</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #FFD700;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .profile-info {
+            margin-left: 20px;
+        }
+
+        .profile-name {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .profile-stats {
+            display: flex;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            margin-right: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        #profile-actions {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        #profile-actions button {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        button {
+            border-radius: 12px;
+            background-color: #FFD700;
+            border: none;
+            color: #111;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #e6c200;
+        }
+
+        button:disabled {
+            background-color: #555;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        button.delete {
+            background-color: #b22222;
+            color: white;
+        }
+
+        button.delete:hover {
+            background-color: #8b0000;
+        }
+
+        .post-item {
+            background-color: #222;
+            border: 1px solid #FFD700;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .post-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .post-text {
+            margin-bottom: 10px;
+        }
+
+        .post-media {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .post-media img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 5px;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .post-actions button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            border: 2px solid #FFD700;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #FFD700;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #FFD700;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #telegram-info {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        #telegram-link {
+            color: #2AABEE;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .user-id-display {
+            background-color: #333;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 5px 0;
+            word-break: break-all;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            z-index: 2000;
+            display: none;
+        }
+
+        .comments-container {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 8px;
+            display: none; /* Сначала скрыты */
+        }
+
+        .comments-container ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .comments-container li {
+            padding: 8px;
+            border-bottom: 1px solid #555;
+            position: relative;
+        }
+
+        .comments-container li:last-child {
+            border-bottom: none;
+        }
+
+        .delete-comment {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background-color: #b22222;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 2px 6px;
+            font-size: 0.8em;
+        }
+
+        .comment-section {
+            display: flex;
+            margin-top: 10px;
+        }
+
+        .comment-section input {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #222;
+            color: #FFD700;
+        }
+
+        /* Улучшим отображение медиа */
+        .post-media {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .post-media img, .post-media video {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .post-media audio {
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
-    <h1 id="profile-title">Профиль пользователя</h1>
-
-    <div id="profile-actions" class="actions">
-        <!-- кнопки редактирования, удаления, добавления поста или отправки сообщения -->
+    <div class="profile-header">
+        <div>
+            <div class="profile-name" id="profile-name">Загрузка...</div>
+            <div id="profile-birthday"></div>
+            <div id="profile-status"></div>
+        </div>
     </div>
 
+    <div class="profile-stats">
+        <div class="stat-item">
+            <div class="stat-value" id="posts-count">0</div>
+            <div class="stat-label">Посты</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="likes-count">0</div>
+            <div class="stat-label">Лайки</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="comments-count">0</div>
+            <div class="stat-label">Комментарии</div>
+        </div>
+    </div>
+
+    <div id="profile-actions"></div>
+    <div id="telegram-info" style="display: none;">
+        <h3>Подключение Telegram</h3>
+        <p>Чтобы получать уведомления:</p>
+        <ol>
+            <li>Перейдите к нашему боту: <a id="telegram-link" href="https://t.me/habithub_bot" target="_blank">@habithub_bot</a></li>
+            <li>Отправьте ему команду: <code>/start</code></li>
+            <li>Затем отправьте ваш ID: <div class="user-id-display" id="telegram-user-id"></div></li>
+        </ol>
+    </div>
+
+    <h2>Посты пользователя</h2>
     <div id="post-feed"></div>
 </div>
-<script src="/pages/profile/profile.js"></script>
+
+<!-- Модальные окна -->
+<div class="modal" id="edit-profile-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Редактировать профиль</h3>
+            <button class="close-modal">&times;</button>
+        </div>
+        <form id="edit-profile-form">
+            <div class="form-group">
+                <label for="edit-name">Имя</label>
+                <input type="text" id="edit-name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-surname">Фамилия</label>
+                <input type="text" id="edit-surname" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-patronymic">Отчество</label>
+                <input type="text" id="edit-patronymic">
+            </div>
+            <div class="form-group">
+                <label for="edit-status">Статус</label>
+                <input type="text" id="edit-status">
+            </div>
+            <div class="form-group">
+                <label for="edit-birthday">Дата рождения</label>
+                <input type="date" id="edit-birthday" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="close-modal">Отмена</button>
+                <button type="submit">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="add-post-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Добавить пост</h3>
+            <button class="close-modal">&times;</button>
+        </div>
+        <form id="add-post-form">
+            <div class="form-group">
+                <label for="post-text">Текст поста</label>
+                <textarea id="post-text" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="post-media">Медиафайлы</label>
+                <input type="file" id="post-media" multiple>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="close-modal">Отмена</button>
+                <button type="submit">Опубликовать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<script>
+    console.log("Current origin:", window.location.origin);
+    // Общие элементы
+    const currentUserId = localStorage.getItem('userId');
+    const urlParts = window.location.pathname.split('/');
+    const profileUserId = urlParts[urlParts.length - 1];
+    const container = document.getElementById('post-feed');
+    const actionsDiv = document.getElementById('profile-actions');
+    const profileName = document.getElementById('profile-name');
+    const profileBirthday = document.getElementById('profile-birthday');
+    const profileStatus = document.getElementById('profile-status');
+    const postsCount = document.getElementById('posts-count');
+    const likesCount = document.getElementById('likes-count');
+    const commentsCount = document.getElementById('comments-count');
+    const telegramInfo = document.getElementById('telegram-info');
+    const telegramUserId = document.getElementById('telegram-user-id');
+
+    // Проверяем, наш ли это профиль
+    const isMyProfile = profileUserId === currentUserId;
+
+    // Состояние для переключения инструкции Telegram
+    let telegramInstructionsVisible = false;
+
+    // Функция для запросов с повторной попыткой
+    async function fetchWithRetry(url, options = {}, retry = true) {
+        const token = localStorage.getItem('jwt');
+        options.headers = {
+            ...(options.headers || {}),
+            'Authorization': `Bearer ${token}`
+        };
+        options.credentials = 'include';
+
+        // Для загрузки файлов не устанавливаем Content-Type
+        if (!(options.body instanceof FormData)) {
+            if (options.headers) {
+                options.headers['Content-Type'] = 'application/json';
+            }
+        }
+
+        const response = await fetch(url, options);
+
+        if (response.status === 401 && retry) {
+            const refresh = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!refresh.ok) {
+                localStorage.removeItem('jwt');
+                window.location.href = '/login';
+                return null;
+            }
+
+            const data = await refresh.json();
+            if (data.token) {
+                localStorage.setItem('jwt', data.token);
+            }
+
+            return fetchWithRetry(url, options, false);
+        }
+
+        return response;
+    }
+
+    // Функция для показа уведомлений
+    function showNotification(message, isSuccess = true) {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.style.backgroundColor = isSuccess ? '#4CAF50' : '#f44336';
+        notification.style.display = 'block';
+
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+
+    // Загрузка данных профиля
+    async function loadProfile() {
+        try {
+            // Загрузка информации о пользователе
+            const userRes = await fetchWithRetry(`/api/users/get/${profileUserId}`);
+            if (!userRes.ok) {
+                throw new Error('Не удалось загрузить данные пользователя');
+            }
+
+            const user = await userRes.json();
+
+            // Отображение данных пользователя
+            profileName.textContent = `${user.surname} ${user.name}`;
+            if (user.patronymic) {
+                profileName.textContent += ` ${user.patronymic}`;
+            }
+
+            profileBirthday.textContent = `Дата рождения: ${new Date(user.birthDay).toLocaleDateString()}`;
+
+            if (user.status) {
+                profileStatus.textContent = `Статус: ${user.status}`;
+            }
+
+            // Формируем кнопки действий
+            if (isMyProfile) {
+                actionsDiv.innerHTML = `
+                        <button id="btn-add-post">Добавить пост</button>
+                        <button id="btn-edit-profile">Редактировать профиль</button>
+                        <button id="btn-delete-profile" class="delete">Удалить профиль</button>
+                        <button id="btn-connect-google">Подключить Google</button>
+                        <button id="btn-connect-telegram">Включить уведомления</button>
+                    `;
+
+                document.getElementById('btn-add-post').onclick = () => {
+                    document.getElementById('add-post-modal').style.display = 'flex';
+                };
+
+                document.getElementById('btn-edit-profile').onclick = () => {
+                    document.getElementById('edit-profile-modal').style.display = 'flex';
+                    // Заполняем форму текущими данными
+                    document.getElementById('edit-name').value = user.name;
+                    document.getElementById('edit-surname').value = user.surname;
+                    document.getElementById('edit-patronymic').value = user.patronymic || '';
+                    document.getElementById('edit-status').value = user.status || '';
+                    document.getElementById('edit-birthday').value = user.birthDay;
+                };
+
+                document.getElementById('btn-delete-profile').onclick = async () => {
+                    if (confirm('Вы уверены, что хотите удалить свой профиль? Это действие нельзя отменить.')) {
+                        const res = await fetchWithRetry('/api/users/delete', {
+                            method: 'DELETE'
+                        });
+
+                        if (res.ok) {
+                            localStorage.clear();
+                            window.location.href = '/';
+                        } else {
+                            showNotification('Ошибка при удалении профиля', false);
+                        }
+                    }
+                };
+
+                // Обработчик кнопки уведомлений (переключатель)
+                document.getElementById('btn-connect-telegram').onclick = () => {
+                    telegramInstructionsVisible = !telegramInstructionsVisible;
+                    telegramInfo.style.display = telegramInstructionsVisible ? 'block' : 'none';
+                    // Устанавливаем userId для Telegram
+                    telegramUserId.textContent = currentUserId;
+                };
+
+                // Инициализация Google OAuth с исправлением redirect_uri
+                const client = google.accounts.oauth2.initCodeClient({
+                    client_id: '319850806378-8oith89dlmvcvths4mk276q9si92rmcl.apps.googleusercontent.com',
+                    scope: 'https://www.googleapis.com/auth/fitness.activity.read',
+                    ux_mode: 'popup',
+                    redirect_uri: 'http://localhost:5000',
+                    callback: async (response) => {
+                        /*
+                         * Важно: Client secret НЕ отправляется с клиента!
+                         * Мы отправляем только код авторизации на сервер,
+                         * а сервер уже использует client secret для обмена кода на токены.
+                         */
+                        const res = await fetchWithRetry('/api/google/token/add', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                code: response.code
+                            }),
+                        });
+
+                        if (res.ok) {
+                            showNotification('Google аккаунт успешно подключен!');
+                            document.getElementById('btn-connect-google').textContent = 'Google подключен ✅';
+                            document.getElementById('btn-connect-google').disabled = true;
+                        } else {
+                            const error = await res.text();
+                            console.error('Ошибка подключения Google:', error);
+                            showNotification('Ошибка подключения Google: ' + error, false);
+                        }
+                    }
+                });
+
+                const btnGoogle = document.getElementById('btn-connect-google');
+                btnGoogle.onclick = () => client.requestCode();
+
+                // Проверка подключения Google
+                try {
+                    const googleRes = await fetchWithRetry('/api/google/token/contains');
+                    if (googleRes.ok) {
+                        const isConnected = await googleRes.json();
+                        if (isConnected) {
+                            btnGoogle.textContent = 'Google подключен ✅';
+                            btnGoogle.disabled = true;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Ошибка проверки Google подключения:', e);
+                }
+            } else {
+                actionsDiv.innerHTML = `<button id="btn-send-msg">Отправить сообщение</button>`;
+                document.getElementById('btn-send-msg').onclick = () => {
+                    alert('Функция отправки сообщений скоро будет доступна!');
+                };
+            }
+
+            // Загружаем и отображаем посты пользователя
+            await renderPosts();
+
+        } catch (error) {
+            console.error('Ошибка загрузки профиля:', error);
+            showNotification('Ошибка загрузки профиля: ' + error.message, false);
+        }
+    }
+
+    // Отображение постов пользователя
+    async function renderPosts() {
+        container.innerHTML = '';
+        let res = await fetchWithRetry(`/api/posts/get/user/${profileUserId}`);
+        if (!res?.ok) return;
+
+        const posts = await res.json();
+        postsCount.textContent = posts.length;
+
+        let totalLikes = 0;
+        let totalComments = 0;
+
+        for (let post of posts) {
+            totalLikes += post.likesCount;
+            totalComments += post.commentsCount;
+
+            const div = document.createElement('div');
+            div.className = 'post-item';
+
+            // Загрузка информации о привычке
+            const habitRes = await fetchWithRetry(`/api/habits/get/${post.habitId}`);
+            if (!habitRes.ok) continue;
+
+            const habit = await habitRes.json();
+
+            const header = document.createElement('div');
+            header.className = 'post-header';
+            header.innerHTML = `
+                    <div>${habit.goal}</div>
+                    <div>${new Date(post.dateTime).toLocaleString()}</div>
+                `;
+
+            const text = document.createElement('div');
+            text.className = 'post-text';
+            text.textContent = post.text;
+
+            // Отображаем медиафайлы сразу
+            const mediaDiv = document.createElement('div');
+            mediaDiv.className = 'post-media';
+            post.mediaFilesUrl.forEach(url => {
+                const ext = url.split('.').pop().toLowerCase();
+                let mediaElement;
+
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    mediaElement = document.createElement('img');
+                    mediaElement.src = url;
+                } else if (['mp4', 'webm'].includes(ext)) {
+                    mediaElement = document.createElement('video');
+                    mediaElement.src = url;
+                    mediaElement.controls = true;
+                    mediaElement.style.maxWidth = '100%';
+                } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
+                    mediaElement = document.createElement('audio');
+                    mediaElement.src = url;
+                    mediaElement.controls = true;
+                } else {
+                    mediaElement = document.createElement('a');
+                    mediaElement.href = url;
+                    mediaElement.target = '_blank';
+                    mediaElement.textContent = 'Скачать файл';
+                    mediaElement.style.color = '#f0d000';
+                }
+
+                mediaDiv.appendChild(mediaElement);
+            });
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'post-actions';
+
+            const likeBtn = document.createElement('button');
+            likeBtn.textContent = `${post.didUserLiked ? '❤️' : '🤍'} ${post.likesCount}`;
+            likeBtn.onclick = async () => {
+                const method = post.didUserLiked ? 'DELETE' : 'POST';
+                const endpoint = `/api/posts/${post.didUserLiked ? 'delete' : 'add'}/${post.id}/like`;
+                const res = await fetchWithRetry(endpoint, { method });
+
+                if (res.ok) {
+                    post.didUserLiked = !post.didUserLiked;
+                    post.likesCount += post.didUserLiked ? 1 : -1;
+                    likeBtn.textContent = `${post.didUserLiked ? '❤️' : '🤍'} ${post.likesCount}`;
+                    likesCount.textContent = parseInt(likesCount.textContent) + (post.didUserLiked ? 1 : -1);
+                }
+            };
+
+            const commentsBtn = document.createElement('button');
+            commentsBtn.textContent = `💬 ${post.commentsCount}`;
+
+            // Контейнер для комментариев
+            const commentsContainer = document.createElement('div');
+            commentsContainer.className = 'comments-container';
+
+            // Загрузка комментариев при нажатии
+            commentsBtn.onclick = async () => {
+                // Переключаем видимость
+                commentsContainer.style.display =
+                    commentsContainer.style.display === 'block' ? 'none' : 'block';
+
+                // Если комментарии еще не загружены
+                if (commentsContainer.innerHTML === '' &&
+                    commentsContainer.style.display === 'block') {
+                    await loadComments(post.id, commentsContainer);
+                }
+            };
+
+            if (isMyProfile) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️ Удалить';
+                deleteBtn.className = 'delete';
+                deleteBtn.onclick = async () => {
+                    if (confirm('Удалить этот пост?')) {
+                        const res = await fetchWithRetry(`/api/posts/delete/${post.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (res.ok) {
+                            div.remove();
+                            postsCount.textContent = parseInt(postsCount.textContent) - 1;
+                            likesCount.textContent = parseInt(likesCount.textContent) - post.likesCount;
+                            commentsCount.textContent = parseInt(commentsCount.textContent) - post.commentsCount;
+                        }
+                    }
+                };
+                actionsDiv.appendChild(deleteBtn);
+            }
+
+            actionsDiv.append(likeBtn, commentsBtn);
+            div.append(header, text, mediaDiv, actionsDiv, commentsContainer);
+            container.appendChild(div);
+        }
+
+        likesCount.textContent = totalLikes;
+        commentsCount.textContent = totalComments;
+    }
+
+    // Загрузка комментариев для поста
+    async function loadComments(postId, container) {
+        try {
+            const res = await fetchWithRetry(`/api/posts/get/${postId}/comments`);
+            if (!res.ok) {
+                container.innerHTML = '<p>Не удалось загрузить комментарии</p>';
+                return;
+            }
+
+            const comments = await res.json();
+            container.innerHTML = '';
+
+            // Загружаем информацию о пользователях
+            const userIds = [...new Set(comments.map(c => c.userId))];
+            const usersMap = {};
+
+            await Promise.all(userIds.map(async id => {
+                const userRes = await fetchWithRetry(`/api/users/get/${id}`);
+                if (userRes.ok) {
+                    usersMap[id] = await userRes.json();
+                }
+            }));
+
+            // Создаем список комментариев
+            const ul = document.createElement('ul');
+            comments.forEach(comment => {
+                const li = document.createElement('li');
+                const user = usersMap[comment.userId];
+                const userName = user ? `${user.surname} ${user.name}` : 'Пользователь';
+
+                li.innerHTML = `
+                        <strong>${userName}:</strong> 
+                        <span>${comment.text}</span>
+                        <small>${new Date(comment.dateTime).toLocaleString()}</small>
+                    `;
+
+                // Если комментарий текущего пользователя, добавляем кнопку удаления
+                if (comment.userId === currentUserId) {
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Удалить';
+                    delBtn.className = 'delete-comment';
+                    delBtn.onclick = async () => {
+                        const res = await fetchWithRetry(`/api/posts/delete/comment/${comment.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (res.ok) {
+                            li.remove();
+                            // Обновляем счетчик комментариев
+                            const commentsBtn = container.previousElementSibling.querySelector('button:nth-child(2)');
+                            const count = parseInt(commentsBtn.textContent.match(/\d+/)[0]) - 1;
+                            commentsBtn.textContent = `💬 ${count}`;
+                            commentsCount.textContent = parseInt(commentsCount.textContent) - 1;
+                        }
+                    };
+                    li.appendChild(delBtn);
+                }
+
+                ul.appendChild(li);
+            });
+
+            container.appendChild(ul);
+
+            // Добавляем поле для нового комментария
+            if (currentUserId) {
+                const commentInputDiv = document.createElement('div');
+                commentInputDiv.className = 'comment-section';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = 'Оставить комментарий...';
+
+                const sendBtn = document.createElement('button');
+                sendBtn.textContent = 'Отправить';
+                sendBtn.onclick = async () => {
+                    if (!input.value.trim()) return;
+
+                    const res = await fetchWithRetry(`/api/posts/add/${postId}/comment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ comment: input.value })
+                    });
+
+                    if (res.ok) {
+                        input.value = '';
+                        // Перезагружаем комментарии
+                        await loadComments(postId, container);
+
+                        // Обновляем счетчик комментариев
+                        const commentsBtn = container.previousElementSibling.querySelector('button:nth-child(2)');
+                        const count = parseInt(commentsBtn.textContent.match(/\d+/)[0]) + 1;
+                        commentsBtn.textContent = `💬 ${count}`;
+                        commentsCount.textContent = parseInt(commentsCount.textContent) + 1;
+                    }
+                };
+
+                commentInputDiv.append(input, sendBtn);
+                container.appendChild(commentInputDiv);
+            }
+
+        } catch (error) {
+            console.error('Ошибка загрузки комментариев:', error);
+            container.innerHTML = '<p>Ошибка загрузки комментариев</p>';
+        }
+    }
+
+    // Обработчики модальных окон
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        };
+    });
+
+    // Обработчик формы редактирования профиля
+    document.getElementById('edit-profile-form').onsubmit = async (e) => {
+        e.preventDefault();
+
+        const updatedUser = {
+            id: profileUserId,
+            name: document.getElementById('edit-name').value,
+            surname: document.getElementById('edit-surname').value,
+            patronymic: document.getElementById('edit-patronymic').value || null,
+            status: document.getElementById('edit-status').value || null,
+            birthDay: document.getElementById('edit-birthday').value
+        };
+
+        const res = await fetchWithRetry('/api/users/put', {
+            method: 'PUT',
+            body: JSON.stringify(updatedUser)
+        });
+
+        if (res.ok) {
+            showNotification('Профиль успешно обновлен!');
+            loadProfile(); // Перезагружаем профиль
+            document.getElementById('edit-profile-modal').style.display = 'none';
+        } else {
+            showNotification('Ошибка при обновлении профиля', false);
+        }
+    };
+
+    // Обработчик формы добавления поста
+    document.getElementById('add-post-form').onsubmit = async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('UserId', currentUserId);
+        formData.append('Text', document.getElementById('post-text').value);
+
+        // Получаем привычку пользователя (для демо - первая привычка)
+        const habitsRes = await fetchWithRetry('/api/habits/get/all');
+        if (!habitsRes.ok) {
+            showNotification('Ошибка получения привычек', false);
+            return;
+        }
+
+        const habits = await habitsRes.json();
+        if (habits.length === 0) {
+            showNotification('Сначала создайте привычку!', false);
+            return;
+        }
+
+        formData.append('HabitId', habits[0].id);
+
+        // Добавляем файлы
+        const files = document.getElementById('post-media').files;
+        for (let i = 0; i < files.length; i++) {
+            formData.append('MediaFiles', files[i]);
+        }
+
+        const res = await fetchWithRetry('/api/posts/add', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            showNotification('Пост успешно добавлен!');
+            document.getElementById('add-post-modal').style.display = 'none';
+            document.getElementById('add-post-form').reset();
+            await renderPosts(); // Обновляем список постов
+        } else {
+            showNotification('Ошибка при добавлении поста', false);
+        }
+    };
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', () => {
+        // Проверяем, что это страница профиля
+        if (window.location.pathname.startsWith('/profile/')) {
+            loadProfile();
+        }
+
+        // Закрытие модальных окон при клике вне их
+        window.onclick = (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        };
+    });
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>

@@ -9,7 +9,10 @@ using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
 using Google.Apis.Fitness.v1;
 using Google.Apis.Fitness.v1.Data;
+using Google.Apis.Http;
 using Google.Apis.Services;
+using Google.Apis.Util;
+using Google.Apis.Util.Store;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +25,7 @@ public class GoogleFitService(
     : IGoogleFitService
 {
     public async Task<Result<ICollection<ActivityData>>> GetActivityDataAsync(Guid userId,
-        DateTime startDate, DateTime endDate)
+    DateTime startDate, DateTime endDate)
     {
         if (startDate >= endDate)
         {
@@ -44,16 +47,53 @@ public class GoogleFitService(
                 HttpClientInitializer = credentials,
                 ApplicationName = configuration["GoogleFit:ApplicationName"]
             });
+            
+            var dataSources = await service.Users.DataSources.List("me").ExecuteAsync();
+            if (dataSources.DataSource == null || !dataSources.DataSource.Any())
+            {
+                logger.LogWarning("Нет зарегистрированных устройств или источников данных");
+                return Result<ICollection<ActivityData>>.Failure(
+                    new Error(ErrorType.NotFound, 
+                        "Нет зарегистрированных устройств. " +
+                        "Пожалуйста, подключите фитнес-трекер в Google Fit."));
+            }
+            
+            var availableDataTypes = dataSources.DataSource
+                .Select(d => d.DataType.Name)
+                .ToList();
+            var aggregateBy = new List<AggregateBy>();
+
+            var requestedTypes = new[]
+            {
+                "com.google.activity.summary",
+                "com.google.step_count.delta",
+                "com.google.calories.expended",
+                "com.google.distance.delta"
+            };
+
+            foreach (var type in requestedTypes)
+            {
+                if (availableDataTypes.Contains(type))
+                {
+                    aggregateBy.Add(new AggregateBy { DataTypeName = type });
+                }
+                else
+                {
+                    logger.LogWarning($"Тип данных {type} недоступен");
+                }
+            }
+
+            if (!aggregateBy.Any())
+            {
+                logger.LogWarning("Нет доступных типов данных для запроса");
+                return Result<ICollection<ActivityData>>.Failure(
+                    new Error(ErrorType.NotFound, 
+                        "Нет доступных данных. Пожалуйста, проверьте настройки Google Fit."));
+            }
 
             var request = new AggregateRequest
             {
-                AggregateBy = new List<AggregateBy>
-                {
-                    new() { DataTypeName = "com.google.activity.summary" },
-                    new() { DataTypeName = "com.google.step_count.delta" },
-                    new() { DataTypeName = "com.google.calories.expended" },
-                    new() { DataTypeName = "com.google.distance.delta" }
-                },
+                AggregateBy = aggregateBy,
                 BucketByTime = new BucketByTime { DurationMillis = 86_400_000 },
                 StartTimeMillis = ToUnixMillis(startDate),
                 EndTimeMillis = ToUnixMillis(endDate)
@@ -141,28 +181,60 @@ public class GoogleFitService(
     {
         var tokenResult = await tokenStore.GetTokenAsync(userId);
         if (!tokenResult.IsSuccess || tokenResult.Value == null)
-            return Result<ICredential>.Failure(tokenResult.Error ?? new Error(ErrorType.NotFound, 
-                "Токен не найден"));
+        {
+            return Result<ICredential>.Failure(
+                new Error(ErrorType.BadRequest, "Требуется авторизация в Google"));
+        }
 
         var tokenData = tokenResult.Value;
-
-        var token = new TokenResponse
-        {
-            AccessToken = tokenData.AccessToken,
-            RefreshToken = tokenData.RefreshToken,
-            ExpiresInSeconds = (long)(tokenData.ExpiresAt - DateTime.UtcNow).TotalSeconds
-        };
 
         var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
         {
             ClientSecrets = new ClientSecrets
             {
-                ClientId = configuration["GoogleFit:ClientId"],
-                ClientSecret = configuration["GoogleFit:ClientSecret"]
-            }
+                ClientId = configuration["Google:ClientId"],
+                ClientSecret = configuration["Google:ClientSecret"]
+            },
+            Scopes = [FitnessService.Scope.FitnessActivityRead],
+            HttpClientFactory = new HttpClientFactory(),
+            DataStore = new FileDataStore("GoogleAuthStore")
         });
 
-        var credential = new UserCredential(flow, userId.ToString(), token);
+        var credential = new UserCredential(flow, userId.ToString(), new TokenResponse
+        {
+            AccessToken = tokenData.AccessToken,
+            RefreshToken = tokenData.RefreshToken,
+            ExpiresInSeconds = (long)(tokenData.ExpiresAt - DateTime.UtcNow).TotalSeconds
+        });
+
+        if (!credential.Token.IsExpired(SystemClock.Default)) return Result<ICredential>.Success(credential);
+        try
+        {
+            if (!await credential.RefreshTokenAsync(CancellationToken.None))
+            {
+                return Result<ICredential>.Failure(
+                    new Error(ErrorType.BadRequest, "Не удалось обновить токен"));
+            }
+
+            var updateResult = await tokenStore.UpdateTokenAsync(
+                userId,
+                credential.Token.AccessToken,
+                credential.Token.RefreshToken,
+                DateTime.UtcNow.AddSeconds(credential.Token.ExpiresInSeconds ?? 3600));
+
+            if (!updateResult.IsSuccess)
+            {
+                logger.LogError($"Не удалось сохранить обновлённый токен: {updateResult.Error?.Message}");
+            }
+        }
+        catch (TokenResponseException ex)
+        {
+            logger.LogError(ex, "Ошибка обновления Google токена");
+            await tokenStore.RemoveTokenAsync(userId);
+            return Result<ICredential>.Failure(
+                new Error(ErrorType.BadRequest, "Требуется повторная авторизация"));
+        }
+
         return Result<ICredential>.Success(credential);
     }
 

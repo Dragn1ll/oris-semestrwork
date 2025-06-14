@@ -1,9 +1,7 @@
-using System.Globalization;
 using System.Security.Claims;
+using System.Text.Json;
 using Application.Interfaces.Services.MainServices;
 using HabitHub.Requests.Google;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HabitHub.Endpoints;
@@ -16,54 +14,84 @@ public static class GoogleEndpoints
             .RequireAuthorization()
             .WithOpenApi();
 
-        app.MapGet("/signin-google", SignInWithGoogle);
-        app.MapGet("/signin-google-callback", GoogleCallback);
-        
+        group.MapPost("/token/add", AddGoogleToken);
         group.MapDelete("/token/remove", RemoveGoogleToken);
         group.MapGet("/token/contains", HasTokenAsync);
         group.MapPost("/fit/progress/analyze", GetUserFitProgressAsync);
     }
     
-    private static IResult SignInWithGoogle(HttpContext context)
+    private static async Task<IResult> AddGoogleToken(
+    ClaimsPrincipal user,
+    [FromBody] GoogleCodeExchangeRequest request,
+    IGoogleService googleService,
+    IConfiguration configuration,
+    ILogger<IGoogleService> logger)
     {
-        Console.WriteLine("SignInWithGoogle");
-        var redirectUri = "/api/google/signin-google-callback";
-        var properties = new AuthenticationProperties { RedirectUri = redirectUri };
-        return Results.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
-    }
-    
-    private static async Task<IResult> GoogleCallback(
-        HttpContext context,
-        IGoogleService googleService
-    )
-    {
-        Console.WriteLine("Google Callback");
-        var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+        if (string.IsNullOrEmpty(request.Code))
+        {
+            logger.LogWarning("Пустой код авторизации");
+            return Results.BadRequest("Не указан код авторизации");
+        }
 
-        if (!result.Succeeded || result.Principal == null)
-            return Results.Problem("Google authentication failed", statusCode: 500);
+        try
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                { "code", request.Code },
+                { "client_id", configuration["Google:ClientId"]! },
+                { "client_secret", configuration["Google:ClientSecret"]! },
+                { "redirect_uri", configuration["Google:RedirectUri"]! },
+                { "grant_type", "authorization_code" }
+            };
 
-        var tokens = result.Properties?.GetTokens();
-        var accessToken = tokens?.FirstOrDefault(t => t.Name == "access_token")?.Value;
-        var refreshToken = tokens?.FirstOrDefault(t => t.Name == "refresh_token")?.Value;
-        var expiresAt = tokens?.FirstOrDefault(t => t.Name == "expires_at")?.Value;
+            using var httpClient = new HttpClient();
+            var response = await httpClient.PostAsync(
+                "https://oauth2.googleapis.com/token", 
+                new FormUrlEncodedContent(parameters));
 
-        if (string.IsNullOrEmpty(accessToken))
-            return Results.Problem("Access token not found", statusCode: 500);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            logger.LogInformation("Google OAuth response: {Response}", responseContent);
 
-        var userId = result.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Results.Problem("Invalid user ID", statusCode: 500);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogError("Google OAuth error: {StatusCode} - {Content}", 
+                    response.StatusCode, responseContent);
+                return Results.Problem("Ошибка авторизации Google", 
+                    statusCode: (int)response.StatusCode);
+            }
 
-        var addResult = await googleService.AddGoogleToken(userGuid, accessToken, refreshToken,
-            DateTime.TryParse(expiresAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal,
-                out var expiry)
-                ? expiry
-                : DateTime.UtcNow.AddHours(1));
+            var responseData = JsonSerializer.Deserialize<GoogleTokenResponse>(responseContent);
+            if (responseData == null || 
+                string.IsNullOrEmpty(responseData.AccessToken) || 
+                string.IsNullOrEmpty(responseData.RefreshToken))
+            {
+                logger.LogError("Неверный формат ответа Google");
+                return Results.Problem("Неверный формат ответа от Google", statusCode: 500);
+            }
 
-        return addResult.IsSuccess
-            ? Results.Ok("Google tokens saved successfully")
-            : Results.Problem(addResult.Error!.Message, statusCode: (int)addResult.Error.ErrorType);
+            var userId = GetUserIdFromClaims(user);
+            if (userId == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var addResult = await googleService.AddGoogleToken(
+                userId.Value, 
+                responseData.AccessToken, 
+                responseData.RefreshToken, 
+                DateTime.UtcNow.AddSeconds(responseData.ExpiresIn));
+
+            return addResult.IsSuccess
+                ? Results.Ok()
+                : Results.Problem(
+                    addResult.Error!.Message, 
+                    statusCode: (int)addResult.Error.ErrorType);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при добавлении Google токена");
+            return Results.Problem("Внутренняя ошибка сервера", statusCode: 500);
+        }
     }
 
     private static async Task<IResult> RemoveGoogleToken(

@@ -5,6 +5,33 @@ const container = document.getElementById('post-feed');
 const actionsDiv = document.getElementById('profile-actions');
 const title = document.getElementById('profile-title');
 
+const client = google.accounts.oauth2.initCodeClient({
+    client_id: '319850806378-8oith89dlmvcvths4mk276q9si92rmcl.apps.googleusercontent.com',
+    scope: 'https://www.googleapis.com/auth/fitness.activity.read',
+    ux_mode: 'popup',
+    callback: async (response) => {
+        // Отправка кода на ваш сервер
+        const res = await fetchWithRetry('/api/google/token/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code: response.code }),
+        });
+
+        if (res.ok) {
+            // Успех - обновляем статус кнопки
+            btnGoogle.textContent = 'Google подключен ✅';
+            btnGoogle.disabled = true;
+            btnGoogle.style.backgroundColor = '#4CAF50';
+        } else {
+            // Обработка ошибки
+            console.error('Ошибка подключения Google');
+            await parseApiError(res);
+        }
+    },
+});
+
 async function fetchWithRetry(url, options = {}, retry = true) {
     const token = localStorage.getItem('jwt');
     options.headers = { ...(options.headers||{}), 'Authorization': `Bearer ${token}` };
@@ -55,7 +82,7 @@ async function loadProfile() {
             } else {
                 btnGoogle.textContent = 'Подключить Google';
                 btnGoogle.disabled = false;
-                btnGoogle.onclick = () => window.location.href = '/auth/google';
+                btnGoogle.onclick = () => client.requestCode();
             }
         } else {
             btnGoogle.textContent = 'Ошибка подключения';

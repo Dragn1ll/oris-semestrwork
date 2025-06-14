@@ -106,11 +106,59 @@ public class RedisGoogleTokenStore(IConnectionMultiplexer redis, ILogger<RedisGo
                 $"Ошибка при удалении токена пользователя {userId}"));
         }
     }
+    
+    public async Task<Result> UpdateTokenAsync(Guid userId, string accessToken, string? refreshToken, DateTime expiresAt)
+    {
+        if (userId == Guid.Empty || string.IsNullOrWhiteSpace(accessToken))
+        {
+            logger.LogWarning("Попытка обновления токена с невалидными параметрами");
+            return Result.Failure(new Error(ErrorType.BadRequest, "Невалидные параметры токена"));
+        }
+
+        try
+        {
+            var db = redis.GetDatabase();
+            var redisKey = GetRedisKey(userId);
+            
+            var existingTokenJson = await db.StringGetAsync(redisKey);
+            var existingToken = existingTokenJson.HasValue 
+                ? JsonSerializer.Deserialize<GoogleTokenData>(existingTokenJson!) 
+                : null;
+            
+            var updatedToken = new GoogleTokenData
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken ?? existingToken?.RefreshToken,
+                ExpiresAt = expiresAt
+            };
+
+            var newExpiration = expiresAt - DateTime.UtcNow;
+            if (newExpiration <= TimeSpan.Zero)
+            {
+                logger.LogWarning($"Некорректный срок действия токена для пользователя {userId}");
+                newExpiration = TimeSpan.FromMinutes(1);
+            }
+
+            await db.StringSetAsync(
+                redisKey, 
+                JsonSerializer.Serialize(updatedToken), 
+                newExpiration);
+
+            logger.LogInformation($"Обновлён Google токен для пользователя {userId}");
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, $"Ошибка при обновлении токена пользователя {userId}");
+            return Result.Failure(new Error(ErrorType.ServerError, "Ошибка обновления токена"));
+        }
+    }
 
     public async Task<Result<bool>> HasTokenAsync(Guid userId)
     {
         if (userId == Guid.Empty)
-            return Result<bool>.Failure(new Error(ErrorType.BadRequest, "UserId не может быть пустым"));
+            return Result<bool>.Failure(new Error(ErrorType.BadRequest, 
+                "UserId не может быть пустым"));
 
         try
         {

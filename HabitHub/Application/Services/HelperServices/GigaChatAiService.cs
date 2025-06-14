@@ -6,6 +6,8 @@ using Application.Interfaces.Services;
 using Application.Interfaces.Services.HelperServices;
 using Application.Utils;
 using Domain.Models;
+using GigaChatAdapter;
+using Microsoft.Extensions.Configuration;
 
 namespace Application.Services.HelperServices;
 
@@ -52,14 +54,7 @@ public class GigaChatAiService(IGigaChatApiClient gigaChatClient) : IAiService
                 **Формат ответа (строгий JSON):**
                 {
                     "completionPercentage": number,
-                    "analysisSummary": string,
-                    "metrics": {
-                        "steps": number,
-                        "calories": number,
-                        "distanceKm": number,
-                        "mainActivity": string,
-                        "activeMinutes": number
-                    }
+                    "analysisSummary": string
                 }
                 """;
 
@@ -70,6 +65,8 @@ public class GigaChatAiService(IGigaChatApiClient gigaChatClient) : IAiService
             var responseText = await gigaChatClient.SendMessageAsync(accessToken.Value!, prompt);
             if (!responseText.IsSuccess)
                 return Result<GoalAnalysisDto>.Failure(responseText.Error);
+
+            Console.WriteLine(responseText.Value);
             
             var result = ParseAiResponse(responseText.Value!);
             return Result<GoalAnalysisDto>.Success(result);
@@ -79,8 +76,9 @@ public class GigaChatAiService(IGigaChatApiClient gigaChatClient) : IAiService
             return Result<GoalAnalysisDto>.Failure(
                 new Error(ErrorType.ServerError, "Неверный формат ответа от AI"));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            Console.WriteLine(exception);
             return Result<GoalAnalysisDto>.Failure(
                 new Error(ErrorType.ServerError, "Ошибка анализа целей"));
         }
@@ -111,16 +109,32 @@ public class GigaChatAiService(IGigaChatApiClient gigaChatClient) : IAiService
 
     private GoalAnalysisDto ParseAiResponse(string aiResponse)
     {
-        var jsonStart = aiResponse.IndexOf('{');
-        var jsonEnd = aiResponse.LastIndexOf('}') + 1;
-        var cleanJson = jsonStart >= 0 && jsonEnd > jsonStart 
-            ? aiResponse[jsonStart..jsonEnd] 
-            : aiResponse;
+        try
+        {
+            var jsonStart = aiResponse.IndexOf('{');
+            var jsonEnd = aiResponse.LastIndexOf('}') + 1;
+            var cleanJson = (jsonStart >= 0 && jsonEnd > jsonStart) 
+                ? aiResponse[jsonStart..jsonEnd] 
+                : aiResponse;
+            
+            using var document = JsonDocument.Parse(cleanJson);
+            var root = document.RootElement;
 
-        var result = JsonSerializer.Deserialize<GoalAnalysisDto>(
-            cleanJson,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = new GoalAnalysisDto
+            {
+                CompletionPercentage = root.GetProperty("completionPercentage").GetInt32(),
+                AnalysisSummary = root.GetProperty("analysisSummary").GetString() ?? string.Empty
+            };
 
-        return result ?? throw new JsonException("Не удалось десериализовать ответ AI");
+            return result;
+        }
+        catch (JsonException ex)
+        {
+            throw new JsonException($"Ошибка десериализации: {ex.Message}");
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException)
+        {
+            throw new JsonException($"Неверный формат JSON: {ex.Message}");
+        }
     }
 }

@@ -26,6 +26,8 @@ public class GigaChatApiClient : IGigaChatApiClient
                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         };
         _httpClient = new HttpClient(handler);
+            
+        _httpClient.DefaultRequestVersion = HttpVersion.Version11;
     }
     
     public async Task<Result<string>> GetAccessTokenAsync()
@@ -38,8 +40,6 @@ public class GigaChatApiClient : IGigaChatApiClient
             var clientSecret = _config["GIGACHAT_CLIENT_SECRET"];
             var basicAuth = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
-            
-            _httpClient.DefaultRequestVersion = HttpVersion.Version11;
 
             var request = new HttpRequestMessage(HttpMethod.Post, authUrl)
             {
@@ -62,8 +62,9 @@ public class GigaChatApiClient : IGigaChatApiClient
 
             return Result<string>.Success(token!);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            Console.WriteLine(exception);
             return Result<string>.Failure(new Error(ErrorType.ServerError,
                 "Не удалось получить токен доступа от GigaChatAi"));
         }
@@ -118,5 +119,4 @@ public class GigaChatApiClient : IGigaChatApiClient
                 "Не удалось отправить запрос GigaChatAi"));
         }
     }
-
 }

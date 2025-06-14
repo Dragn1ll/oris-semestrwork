@@ -30,13 +30,8 @@ public static class ApiExtensions
         services.Configure<JwtOptions>(configuration.GetSection(nameof(JwtOptions)));
 
         var jwtOptions = configuration.GetSection(nameof(JwtOptions)).Get<JwtOptions>();
-        
-        services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            })
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -48,26 +43,6 @@ public static class ApiExtensions
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtOptions!.SecretKey))
                 };
-            })
-            .AddCookie()
-            .AddGoogle(options =>
-            {
-                options.ClientId = configuration["Google:ClientId"]!;
-                options.ClientSecret = configuration["Google:ClientSecret"]!;
-                options.CallbackPath = "/signin-google-callback";
-                options.SaveTokens = true;
-                options.AccessType = "offline";
-    
-                options.Events = new OAuthEvents
-                {
-                    OnRedirectToAuthorizationEndpoint = context =>
-                    {
-                        context.Response.Redirect(context.RedirectUri + "&prompt=consent");
-                        return Task.CompletedTask;
-                    }
-                };
-    
-                options.Scope.Add("https://www.googleapis.com/auth/fitness.activity.read");
             });
 
         services.AddAuthorization();

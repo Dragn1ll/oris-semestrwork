@@ -12,6 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="AutoMapper" Version="14.0.0" />
+      <PackageReference Include="GigaChatAdapter" Version="1.0.7" />
       <PackageReference Include="Google.Apis.Auth" Version="1.69.0" />
       <PackageReference Include="Google.Apis.Fitness.v1" Version="1.68.0.3232" />
       <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
