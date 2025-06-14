@@ -84,8 +84,8 @@ app.AddPages();
 
 app.UseCookiePolicy(new CookiePolicyOptions
 {
-    MinimumSameSitePolicy = SameSiteMode.Lax,
-    Secure = CookieSecurePolicy.SameAsRequest,
+    MinimumSameSitePolicy = SameSiteMode.Strict,
+    Secure = CookieSecurePolicy.Always,
     HttpOnly = HttpOnlyPolicy.Always
 });
         

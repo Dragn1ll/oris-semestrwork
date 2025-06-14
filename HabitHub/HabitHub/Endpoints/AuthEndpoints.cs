@@ -16,12 +16,14 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/auth/register", Register)
+        var group = app.MapGroup("/api/auth");
+        
+        group.MapPost("/register", Register)
             .AddEndpointFilter<ValidationFilter<RegisterRequest>>();
-        app.MapPost("/api/auth/login", Login)
+        group.MapPost("/login", Login)
             .AddEndpointFilter<ValidationFilter<LoginRequest>>();
-        app.MapPost("/api/auth/refresh", Refresh)
-            .RequireAuthorization();
+        group.MapPost("/refresh", Refresh);
+        group.MapPost("/logout", Logout);
     }
 
     private static async Task<IResult> Register(
@@ -70,12 +72,12 @@ public static class AuthEndpoints
         );
 
         var checkToken = await refreshTokenRepository
-            .GetByFilterAsync(rt => rt.UserId == userAuthInfoDto.Value.Id); 
+            .GetByFilterAsync(rt => rt.UserId == userAuthInfoDto.Value.Id);
 
-        if (checkToken is {IsSuccess: true or false, Value: null})
+        if (!checkToken.IsSuccess || checkToken.Value == null)
             await refreshTokenRepository.AddAsync(refreshToken);
         else
-            await refreshTokenRepository.UpdateAsync(checkToken.Value!.Id, rt =>
+            await refreshTokenRepository.UpdateAsync(checkToken.Value.Id, rt =>
             {
                 rt.Token = refreshToken.Token;
                 rt.Expires = refreshToken.Expires;
@@ -107,18 +109,18 @@ public static class AuthEndpoints
         if (string.IsNullOrEmpty(refreshToken))
             return Results.Problem("No refresh token", statusCode: 400);
 
-        var savedTokenResult = await refreshTokenRepository.GetByFilterAsync(rt =>
+        var getTokenResult = await refreshTokenRepository.GetByFilterAsync(rt =>
             rt.Token == refreshToken && !rt.IsRevoked && rt.Expires > DateTime.UtcNow);
 
-        if (!savedTokenResult.IsSuccess || savedTokenResult.Value == null)
+        if (!getTokenResult.IsSuccess || getTokenResult.Value == null)
             return Results.Problem(statusCode: 401);
 
-        var userId = savedTokenResult.Value.UserId;
+        var userId = getTokenResult.Value.UserId;
 
         var newAccessToken = jwtWorker.GenerateJwtToken(new UserAuthInfoDto { Id = userId });
         var newRefreshToken = jwtWorker.GenerateRefreshToken();
 
-        await refreshTokenRepository.UpdateAsync(savedTokenResult.Value.Id, rt =>
+        await refreshTokenRepository.UpdateAsync(getTokenResult.Value.Id, rt =>
         {
             rt.Token = newRefreshToken;
             rt.Expires = DateTime.UtcNow.AddDays(7);
@@ -126,9 +128,6 @@ public static class AuthEndpoints
 
         context.Response.Cookies.Append("refresh-token", newRefreshToken, new CookieOptions
         {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddDays(7)
         });
 
@@ -136,5 +135,28 @@ public static class AuthEndpoints
         {
             token = newAccessToken
         });
+    }
+
+    private static async Task<IResult> Logout(
+        HttpContext context,
+        IRefreshTokenRepository refreshTokenRepository
+    )
+    {
+        var refreshToken = context.Request.Cookies["refresh-token"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return Results.Problem("No refresh token", statusCode: 400);
+        
+        var getTokenResult = await refreshTokenRepository.GetByFilterAsync(rt => 
+            rt.Token == refreshToken && !rt.IsRevoked && rt.Expires > DateTime.UtcNow);
+        if (!getTokenResult.IsSuccess || getTokenResult.Value == null)
+            return Results.Problem("No refresh token", statusCode: 400);
+
+        var putResult = await refreshTokenRepository.UpdateAsync(getTokenResult.Value.Id,
+            rt => rt.IsRevoked = true);
+        if (!putResult.IsSuccess)
+            return Results.Problem(statusCode: 500);
+        
+        context.Response.Cookies.Delete("refresh-token");
+        return Results.Ok();
     }
 }

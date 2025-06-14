@@ -36,13 +36,5 @@ public static class PagesEndpoints
             context.Response.ContentType = "text/html";
             await context.Response.SendFileAsync("wwwroot/pages/profile/profile.html");
         });
-        
-        app.MapGet("/auth/google", async (HttpContext _) =>
-        {
-            return Results.Challenge(new AuthenticationProperties
-            {
-                RedirectUri = "/api/google/token/add"
-            }, [GoogleDefaults.AuthenticationScheme]);
-        });
     }
 }

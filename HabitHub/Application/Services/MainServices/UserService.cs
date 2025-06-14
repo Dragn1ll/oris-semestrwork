@@ -20,6 +20,11 @@ public class UserService(
     {
         try
         {
+            var getResult = await userRepository.GetByFilterAsync(u => u.Email == userAddDto.Email);
+            if (getResult is { IsSuccess: true, Value: not null })
+                return Result<IdDto>.Failure(new Error(ErrorType.BadRequest,
+                    "Пользователь с таким Email уже существует"));
+            
             var userModel = mapper.Map<User>(userAddDto);
             var addResult = await userRepository.AddAsync(userModel);
 

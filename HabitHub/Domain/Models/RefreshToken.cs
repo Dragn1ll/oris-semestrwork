@@ -16,10 +16,10 @@ public class RefreshToken(
 
     public static RefreshToken Create(Guid id, Guid userId, string token, DateTime expires, bool isRevoked)
     {
-        if (id != Guid.Empty)
+        if (id == Guid.Empty)
             throw new ArgumentException("Id cannot be empty");
         
-        if (userId != Guid.Empty)
+        if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty");
         
         if (string.IsNullOrWhiteSpace(token))
